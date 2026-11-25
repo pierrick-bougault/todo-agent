@@ -1,8 +1,21 @@
 import { Router } from "express";
+
 import { z } from "zod";
+
 import type { TaskStore } from "./task-store.ts";
 
-const createTaskSchema = z.strictObject({ title: z.string().trim().min(1).max(200) });
+const dateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式应为 YYYY-MM-DD")
+  .refine((value) => !Number.isNaN(Date.parse(value)), "日期无效");
+
+const createTaskSchema = z.strictObject({
+  title: z.string().trim().min(1).max(200),
+  dueDate: dateSchema.optional(),
+  priority: z.enum(["小", "中", "大"]).optional(),
+  parentId: z.string().min(1).optional(),
+});
+
 const updateTaskSchema = createTaskSchema
   .partial()
   .extend({ done: z.boolean().optional() })
@@ -22,13 +35,18 @@ export function taskRouter(tasks: TaskStore) {
     if (!input.success) {
       return res.status(400).json({ error: "请提供 1 至 200 个字符的任务标题。" });
     }
-    res.status(201).json(tasks.create(input.data.title));
+    const { title, ...extra } = input.data;
+    const created = tasks.create(title);
+    const task = Object.keys(extra).length > 0 ? tasks.update(created.id, extra) : created;
+    res.status(201).json(task);
   });
 
   router.patch("/:id", (req, res) => {
     const input = updateTaskSchema.safeParse(req.body);
     if (!input.success) {
-      return res.status(400).json({ error: "请提供有效的 title 或 done 字段。" });
+      return res
+        .status(400)
+        .json({ error: "请提供有效的 title、done、dueDate、priority 或 parentId 字段。" });
     }
 
     const updated = tasks.update(req.params.id, input.data);

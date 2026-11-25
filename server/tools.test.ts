@@ -87,3 +87,52 @@ test("delete on empty store is a JSON error, not a crash", async (t) => {
   assert.equal(result.ok, false);
   assert.equal(typeof result.error, "string");
 });
+
+test("create_task accepts dueDate/priority/parentId and they persist", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "tools-ext-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = join(dir, "tasks.json");
+  const tasks = createJsonTaskStore(file);
+  const result = executeTool(
+    "create_task",
+    { title: "交房租", dueDate: "2026-11-30", priority: "大" },
+    tasks,
+  );
+  assert.equal(result.ok, true);
+  // round-trip through a fresh store on the same file
+  const reloaded = createJsonTaskStore(file).list();
+  assert.equal(reloaded[0].dueDate, "2026-11-30");
+  assert.equal(reloaded[0].priority, "大");
+});
+
+test("update_task rejects an invalid dueDate as a JSON error", async (t) => {
+  const tasks = await tempStore(t);
+  executeTool("create_task", { title: "买牛奶" }, tasks);
+  const result = executeTool("update_task", { task: "买牛奶", dueDate: "30/11/2026" }, tasks);
+  assert.equal(result.ok, false);
+});
+
+test("list_tasks_due_today returns only open tasks due today", async (t) => {
+  const tasks = await tempStore(t);
+  const today = new Date();
+  const iso = today.toISOString().slice(0, 10);
+  const tomorrow = new Date(today.getTime() + 86400000).toISOString().slice(0, 10);
+  executeTool("create_task", { title: "今天的事", dueDate: iso }, tasks);
+  executeTool("create_task", { title: "明天的事", dueDate: tomorrow }, tasks);
+  const result = executeTool("list_tasks_due_today", {}, tasks);
+  assert.equal(result.ok, true);
+  const hits = result.tasks as { title: string }[];
+  assert.deepEqual(
+    hits.map((x) => x.title),
+    ["今天的事"],
+  );
+});
+
+test("completing the last subtask auto-completes the parent", async (t) => {
+  const tasks = await tempStore(t);
+  const parent = executeTool("create_task", { title: "装修" }, tasks).task as { id: string };
+  executeTool("create_task", { title: "买油漆", parentId: parent.id }, tasks);
+  const paint = tasks.list().find((x) => x.title === "买油漆")!;
+  executeTool("update_task", { task: paint.id, done: true }, tasks);
+  assert.equal(tasks.list().find((x) => x.id === parent.id)?.done, true);
+});

@@ -30,6 +30,14 @@ paths:
               required: [title]
               properties:
                 title: { $ref: "#/components/schemas/Title" }
+                dueDate:
+                  {
+                    type: string,
+                    pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                    description: 到期日 YYYY-MM-DD,
+                  }
+                priority: { $ref: "#/components/schemas/Priority" }
+                parentId: { type: string, description: 父任务 id，用于子任务 }
       responses:
         "201":
           description: 新建的任务
@@ -57,6 +65,14 @@ paths:
               properties:
                 title: { $ref: "#/components/schemas/Title" }
                 done: { type: boolean }
+                dueDate:
+                  {
+                    type: string,
+                    pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                    description: 到期日 YYYY-MM-DD,
+                  }
+                priority: { $ref: "#/components/schemas/Priority" }
+                parentId: { type: string, description: 父任务 id，用于子任务 }
       responses:
         "200":
           description: 更新后的任务
@@ -86,6 +102,13 @@ components:
         id: { type: string, format: uuid }
         title: { $ref: "#/components/schemas/Title" }
         done: { type: boolean }
+        dueDate: { type: string, pattern: "^\\d{4}-\\d{2}-\\d{2}$" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        parentId: { type: string }
+    Priority:
+      type: string
+      enum: [小, 中, 大]
+      description: 优先级/工作量
     Error:
       type: object
       required: [error]

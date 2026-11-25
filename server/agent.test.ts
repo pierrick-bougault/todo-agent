@@ -16,6 +16,8 @@ import { createAgent } from "./agent.ts";
 
 import { createJsonTaskStore, type TaskStore } from "./task-store.ts";
 
+import { executeTool } from "./tools.ts";
+
 async function tempStore(t: TestContext): Promise<TaskStore> {
   const dir = await mkdtemp(join(tmpdir(), "agent-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
@@ -269,4 +271,25 @@ test("empty final content -> non-empty fallback reply", async (t) => {
   const reply = createAgent({ tasks, callModel });
   const answer = await reply([{ role: "user", content: "你好" }]);
   assert.ok(answer.trim().length > 0);
+});
+
+test("extension: '今天有哪些任务到期？' -> list_tasks_due_today, date logic in code", async (t) => {
+  const tasks = await tempStore(t);
+  const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+  executeTool("create_task", { title: "今天交报告", dueDate: today }, tasks);
+  executeTool("create_task", { title: "明天买菜", dueDate: "2999-01-01" }, tasks);
+  const log: ModelMessage[][] = [];
+  const callModel = scriptTurns(
+    [
+      { content: null, toolCalls: [toolCall("c1", "list_tasks_due_today", {})] },
+      { content: "今天到期：⬜ 今天交报告", toolCalls: [] },
+    ],
+    log,
+  );
+  const reply = createAgent({ tasks, callModel });
+  const answer = await reply([{ role: "user", content: "今天有哪些任务到期？" }]);
+  assert.ok(answer.includes("今天交报告"));
+  assert.ok(!answer.includes("明天买菜"));
+  const obs = log[1][log[1].length - 1];
+  assert.ok(obs.role === "tool" && obs.content.includes("今天交报告"));
 });

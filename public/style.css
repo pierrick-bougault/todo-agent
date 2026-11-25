@@ -197,3 +197,64 @@ textarea {
   color: #95271e;
   margin: 0 0 8px;
 }
+
+/* Live task panel next to the chat */
+main {
+  flex-direction: row;
+}
+.chat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.task-panel {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid #e3e6ed;
+  background: white;
+  padding: 18px;
+  overflow-y: auto;
+}
+.task-panel h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.task-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.task-panel li {
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid #e0e4ed;
+  border-radius: 10px;
+  background: #f8f9fc;
+  line-height: 1.5;
+}
+.task-panel li.done {
+  opacity: 0.6;
+}
+.task-panel em {
+  font-style: normal;
+  color: #b3541e;
+  font-size: 12px;
+  margin-left: 6px;
+}
+.task-panel small {
+  color: #637086;
+  font-size: 12px;
+  margin-left: 6px;
+}
+.task-panel .empty {
+  color: #627086;
+  font-size: 14px;
+}
+@media (max-width: 860px) {
+  .task-panel {
+    display: none;
+  }
+}
