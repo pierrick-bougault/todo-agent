@@ -1,1 +1,1 @@
-{ "ignorePatterns": ["dist/**", "package-lock.json"] }
+{ "ignorePatterns": ["dist/**", "package-lock.json", "*.md"] }
